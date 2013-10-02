@@ -1,0 +1,5 @@
+---
+- hosts: all
+  tasks:
+  - name: remove the 127.0.0.1 localhost openstack.blueboxgrid.com line from /etc/hosts
+    command: sed -i /^127\.0\.0\.1[[:space:]]localhost[[:space:]]openstack\.blueboxgrid\.com/d /etc/hosts
