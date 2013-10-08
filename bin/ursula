@@ -1,17 +1,64 @@
 #!/bin/bash
-env=$1
+set -e
+
+
+usage() {
+  echo "Usage:  ursula [-f] [-h] ENV_DIRECTORY PLAYBOOK"
+  echo ""
+  echo "          -f/--force       don't check for upstream git commits"
+  echo "          -h/--help        show usage and exit"
+}
+
+args=$(getopt -o "f h" -l "force help" -n ursula -- "$@")
+eval set -- "$args";
+
+while true ; do
+  case "$1" in
+    -f|--force) export force="yes"; shift ;;
+    -h|--help) usage; exit 0 ;;
+    --) shift ; break ;;
+    *) echo "ERROR: unsupported option $1." ; exit 1 ;;
+  esac
+done
+
+if [ $# -ne 2 ]; then usage; exit 1; fi
+
+env_dir=$1
 playbook=$2
+hosts=$env_dir/hosts
+ssh_config=$env_dir/ssh_config
 
-hosts=$1/hosts
-ssh_config=$1/ssh_config
+die_on_missing_commits() {
+  local git_dir=$1
+  if ! [ -e $git_dir/.git ]; then return; fi
+  pushd $git_dir
+  git fetch origin >/dev/null
+  if git log --oneline HEAD..origin/master | egrep "[a-z1-9]"; then
+    echo ""
+    echo "ERROR: bailing because you are missing some commits from upstream master in $git_dir."
+    echo "       use --force to proceed anyway."
+    exit 1
+  fi
+  popd
+}
 
+function abs_path {
+  (cd "${1%/*}" &>/dev/null && printf "%s/%s" "$(pwd)" "${1##*/}")
+}
+
+if [ -z $force ]; then
+  die_on_missing_commits $(abs_path $(dirname "${BASH_SOURCE[0]}")/..)
+  die_on_missing_commits $(abs_path $env_dir/..)
+fi
+
+# configure ansible environment
 export ANSIBLE_SSH_ARGS="-o ControlMaster=auto -o ControlPath=~/.ssh/ursula-%l-%r@%h:%p -o ControlPersist=yes "
 if [ -e $ssh_config ]; then
   export ANSIBLE_SSH_ARGS="$ANSIBLE_SSH_ARGS -F $ssh_config"
 fi
-
 export ANSIBLE_NOCOWS=1
 
+# run ansible, yay!
 ansible-playbook \
   --inventory-file $hosts \
   --user root \
