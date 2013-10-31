@@ -28,14 +28,15 @@ corosync:
     0QJoh4biaU2vM8A2/vHcvMnEQmDmEY/ZYGOFuDOsvnw=
 
 endpoints:
-  main:     *controller
-  db:       *controller
-  keystone: *controller
-  rabbit:   *controller
-  nova:     *controller
-  glance:   *controller
-  neutron:  *controller
-  vnc:      *controller
+  main:            *controller
+  db:              *controller
+  keystone:        *controller
+  rabbit:          *controller
+  nova:            *controller
+  glance_api:      *controller
+  glance_registry: *controller
+  neutron:         *controller
+  vnc:             *controller
 
 mysql:
   root_password: asdf
@@ -64,6 +65,7 @@ client_self_signed_cert: true
 
 nova_common_libvirt_type: qemu
 nova_common_api_workers: 1
+nova_common_ec2_api_workers: 1
 nova_common_metadata_api_workers: 1
 
 cinder:

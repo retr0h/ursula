@@ -4,6 +4,7 @@
     tenant={{ item }}
     tenant_description="{{ item }} tenant"
     token={{ secrets.admin_token }}
+    endpoint=https://{{ endpoints.main }}:35358/v2.0/
   with_items: keystone.tenants
 
 
@@ -13,6 +14,7 @@
     password={{ item.password }}
     tenant={{ item.tenant }}
     token={{ secrets.admin_token }}
+    endpoint=https://{{ endpoints.main }}:35358/v2.0/
   with_items: keystone.users
 
 - name: keystone roles
@@ -21,6 +23,7 @@
     user={{ item.user }}
     tenant={{ item.tenant }}
     token={{ secrets.admin_token }}
+    endpoint=https://{{ endpoints.main }}:35358/v2.0/
   with_items: keystone.user_roles
 
 - name: keystone services
@@ -33,4 +36,5 @@
     admin_url={{ item.admin_url }}
     region=RegionOne
     token={{ secrets.admin_token }}
+    endpoint=https://{{ endpoints.main }}:35358/v2.0/
   with_items: keystone.services

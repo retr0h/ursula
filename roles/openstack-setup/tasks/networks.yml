@@ -9,7 +9,7 @@
       router_external={{ item.external }}
       provider_segmentation_id={{ item.segmentation_id }}
       provider_physical_network={{ item.provider_physical_network }}
-      auth_url=https://{{ endpoints.main }}:5001/v2.0/
+      auth_url=https://{{ endpoints.main }}:35358/v2.0/
       login_tenant_name=admin
       login_password={{ secrets.admin_password }}
       {% if client_self_signed_cert is defined -%}
@@ -27,7 +27,7 @@
       gateway_ip={{ item.gateway_ip }}
       ip_version={{ item.ip_version }}
       state=present
-      auth_url=https://{{ endpoints.main }}:5001/v2.0/
+      auth_url=https://{{ endpoints.main }}:35358/v2.0/
       login_tenant_name=admin
       login_password={{ secrets.admin_password }}
       {% if client_self_signed_cert is defined -%}
@@ -42,7 +42,7 @@
       name={{ item.name }}
       tenant_name={{ item.tenant_name }}
       admin_state_up=true
-      auth_url=https://{{ endpoints.main }}:5001/v2.0/
+      auth_url=https://{{ endpoints.main }}:35358/v2.0/
       login_tenant_name=admin
       login_password={{ secrets.admin_password }}
       {% if client_self_signed_cert is defined -%}
@@ -57,7 +57,7 @@
       subnet_name={{ item.subnet_name }}
       tenant_name={{ item.tenant_name }}
       state=present
-      auth_url=https://{{ endpoints.main }}:5001/v2.0/
+      auth_url=https://{{ endpoints.main }}:35358/v2.0/
       login_tenant_name=admin
       login_password={{ secrets.admin_password }}
       {% if client_self_signed_cert is defined -%}
