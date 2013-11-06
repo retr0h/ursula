@@ -31,3 +31,15 @@
 
 - name: set cluster's node ip address
   lineinfile: dest=/etc/my.cnf regexp=^wsrep_node_address line=wsrep_node_address={{ ansible_eth0['ipv4']['address'] }}
+
+- name: cron - 24-hr backup at 12:20am
+  cron: name="nightly backups" hour="0" minute="20" job="/usr/bin/innobackupex --stream=tar /backup/ | /bin/gzip - > /backup/db-backup-24-hr.tar.gz" user="root"
+
+- name: cron - mv 24-hr backup to 48-hr backup
+  cron: name="cp nightly backups to 48-hr backup" minute="0" hour="0" day="*/2" job="/bin/mv /backup/db-backup-24-hr.tar.gz /backup/db-backup-48-hr.tar.gz" user="root"
+  
+- name: cron - mv weekly backup to bi-weekly backup 
+  cron: name="weekly backups" minute="10" hour="1" day="6" job="mv /backup/db-backup-weekly.tar.gz /backup/db-backup-bi-weekly.tar.gz" user="root"
+
+- name: cron - create weekly backup 
+  cron: name="bi-weekly backup" minute="30" hour="0" day="6" job="/usr/bin/innobackupex --stream=tar /backup/ | /bin/gzip - > /backup/db-backup-weekly.tar.gz" user="root"
