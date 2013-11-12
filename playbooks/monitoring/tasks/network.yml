@@ -4,4 +4,5 @@
     - neutron-l3-agent
     - neutron-dhcp-agent
     - neutron-metadata-agent
+    - ucarp
   notify: restart sensu-client

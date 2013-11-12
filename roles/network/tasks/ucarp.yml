@@ -1,0 +1,12 @@
+---
+- apt: pkg={{ item }}
+  with_items:
+    - ucarp
+    - arping
+
+- template: src=etc/vip-up.sh dest=/etc/vip-up.sh owner=root mode=0755
+- template: src=etc/vip-down.sh dest=/etc/vip-down.sh owner=root mode=0755
+
+- template: src=etc/init/ucarp.conf dest=/etc/init/ucarp.conf owner=root mode=0644
+- service: name=ucarp state=started
+
