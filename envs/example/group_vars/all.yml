@@ -9,6 +9,7 @@ secrets:
   service_password: &service_password asdf
   rabbit_password:  asdf
   admin_password:   &admin_password asdf
+  blueboxadmin_password: &blueboxadmin_password ghij
   metadata_proxy_shared_secret: asdf
   horizon_secret_key:           asdf
 
