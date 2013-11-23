@@ -1,0 +1,268 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# (c) 2013, John Dewey <john@dewey.ws>
+#
+# This module is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this software.  If not, see <http://www.gnu.org/licenses/>.
+
+try:
+    from novaclient.v1_1 import client
+    #from novaclient import client
+    from novaclient import exceptions as exc
+except ImportError:
+    print("failed=True msg='novaclient is required for this module to work'")
+
+DOCUMENTATION = '''
+---
+module: nova_group
+version_added: "1.5"
+short_description: Maintain nova security groups.
+description:
+  - Manage nova security groups using the python-novaclient library.
+options:
+
+  login_username:
+    description:
+        - Login username to authenticate to keystone.  If not set then the value of the OS_USERNAME environment variable is used.
+    required: false
+    default: None
+  login_password:
+    description:
+      - Password of login user.  If not set then the value of the OS_PASSWORD environment variable is used.
+    required: false
+    default: None
+  login_tenant_name:
+    description:
+      - The tenant name of the login user.  If not set then the value of the OS_TENANT_NAME environment variable is used.
+    required: false
+    default: None
+  auth_url:
+    description:
+      - The keystone url for authentication.  If not set then the value of the OS_AUTH_URL environment variable is used.
+    required: false
+    default: None
+  region_name:
+    description:
+      - Name of the region.
+    required: false
+    default: None
+  name:
+    description:
+      - Name of the security group.
+    required: true
+  description:
+    description:
+      - Description of the security group.
+    required: true
+  rules:
+    description:
+      - List of firewall rules to enforce in this group (see example).
+    required: true
+  state:
+    description:
+      - Indicate desired state of the resource.
+    choices: ['present', 'absent']
+    required: false
+    default: 'present'
+
+requirements: ["novaclient"]
+'''
+
+EXAMPLES = '''
+- name: example nova group
+  local_action:
+    module: ec2_group
+    name: example
+    description: an example EC2 group
+    vpc_id: 12345
+    region: eu-west-1a
+    ec2_secret_key: SECRET
+    ec2_access_key: ACCESS
+    rules:
+      - proto: tcp
+        from_port: 80
+        to_port: 80
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 10.0.0.0/8
+      - proto: udp
+        from_port: 10050
+        to_port: 10050
+        cidr_ip: 10.0.0.0/8
+      - proto: udp
+        from_port: 10051
+        to_port: 10051
+        group_id: abcdef
+'''
+
+#def addRulesToLookup(rules, prefix, dict):
+#    for rule in rules:
+#        for grant in rule.grants:
+#            dict["%s-%s-%s-%s-%s-%s" % (prefix, rule.ip_protocol, rule.from_port, rule.to_port,
+#                                        grant.group_id, grant.cidr_ip)] = rule
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            name=dict(required=True),
+            description=dict(required=True),
+            rules=dict(),
+            login_username=dict(),
+            login_password=dict(no_log=True),
+            login_tenant_name=dict(),
+            auth_url= dict(),
+            region_name=dict(default=None),
+            state = dict(default='present', choices=['present', 'absent']),
+        ),
+        supports_check_mode=True,
+    )
+    login_username = module.params.get('login_username')
+    login_password = module.params.get('login_password')
+    login_tenant_name = module.params.get('login_tenant_name')
+    auth_url = module.params.get('auth_url')
+
+    # allow stackrc environment variables to be used if ansible vars aren't set
+    if not login_username and 'OS_USERNAME' in os.environ:
+        login_username = os.environ['OS_USERNAME']
+
+    if not login_password and 'OS_PASSWORD' in os.environ:
+        login_password = os.environ['OS_PASSWORD']
+
+    if not login_tenant_name and 'OS_TENANT_NAME' in os.environ:
+        login_tenant_name = os.environ['OS_TENANT_NAME']
+
+    if not auth_url and 'OS_AUTH_URL' in os.environ:
+        auth_url = os.environ['OS_AUTH_URL']
+
+    name = module.params.get('name')
+    description = module.params.get('description')
+    rules = module.params.get('rules')
+    state = module.params.get('state')
+
+    nova = client.Client(login_username,
+                         login_password,
+                         login_tenant_name,
+                         auth_url,
+                         service_type='compute')
+    try:
+        nova.authenticate()
+    except exc.Unauthorized as e:
+        module.fail_json(msg = " Invalid OpenStack Nova credentials.: %s" % e.message)
+    except exc.AuthorizationFailure as e:
+        module.fail_json(msg = "Unable to authorize user: %s" % e.message)
+
+#    # find the group if present
+#    group = None
+#    groups = {}
+#    for curGroup in ec2.get_all_security_groups():
+#        groups[curGroup.id] = curGroup
+
+#        if curGroup.name == name and curGroup.vpc_id == vpc_id:
+#            group = curGroup
+
+#    # Ensure requested group is absent
+#    if state == 'absent':
+#        if group:
+#            '''found a match, delete it'''
+#            try:
+#                group.delete()
+#            except Exception, e:
+#                module.fail_json(msg="Unable to delete security group '%s' - %s" % (group, e))
+#            else:
+#                group = None
+#                changed = True
+#        else:
+#            '''no match found, no changes required'''
+
+#    # Ensure requested group is present
+#    elif state == 'present':
+#        if group:
+#            '''existing group found'''
+#            # check the group parameters are correct
+#            group_in_use = False
+#            rs = ec2.get_all_instances()
+#            for r in rs:
+#                for i in r.instances:
+#                    group_in_use |= reduce(lambda x, y: x | (y.name == 'public-ssh'), i.groups, False)
+
+#            if group.description != description:
+#                if group_in_use:
+#                    module.fail_json(msg="Group description does not match, but it is in use so cannot be changed.")
+
+#        # if the group doesn't exist, create it now
+#        else:
+#            '''no match found, create it'''
+#            if not module.check_mode:
+#                group = ec2.create_security_group(name, description, vpc_id=vpc_id)
+#            changed = True
+#    else:
+#        module.fail_json(msg="Unsupported state requested: %s" % state)
+
+#    # create a lookup for all existing rules on the group
+#    if group:
+#        groupRules = {}
+#        addRulesToLookup(group.rules, 'in', groupRules)
+
+#        # Now, go through all provided rules and ensure they are there.
+#        if rules:
+#            for rule in rules:
+#                group_id = None
+#                ip = None
+#                if 'group_id' in rule and 'cidr_ip' in rule:
+#                    module.fail_json(msg="Specify group_id OR cidr_ip, not both")
+#                elif 'group_id' in rule:
+#                    group_id = rule['group_id']
+#                elif 'cidr_ip' in rule:
+#                    ip = rule['cidr_ip']
+
+#                if rule['proto'] == 'all':
+#                    rule['proto'] = -1
+#                    rule['from_port'] = None
+#                    rule['to_port'] = None
+
+#                # If rule already exists, don't later delete it
+#                ruleId = "%s-%s-%s-%s-%s-%s" % ('in', rule['proto'], rule['from_port'], rule['to_port'], group_id, ip)
+#                if ruleId in groupRules:
+#                    del groupRules[ruleId]
+#                # Otherwise, add new rule
+#                else:
+#                    grantGroup = None
+#                    if group_id:
+#                        grantGroup = groups[group_id]
+
+#                    if not module.check_mode:
+#                        group.authorize(rule['proto'], rule['from_port'], rule['to_port'], ip, grantGroup)
+#                    changed = True
+
+#        # Finally, remove anything left in the groupRules -- these will be defunct rules
+#        for rule in groupRules.itervalues():
+#            for grant in rule.grants:
+#                grantGroup = None
+#                if grant.group_id:
+#                    grantGroup = groups[grant.group_id]
+#                if not module.check_mode:
+#                    group.revoke(rule.ip_protocol, rule.from_port, rule.to_port, grant.cidr_ip, grantGroup)
+#                changed = True
+
+#    if group:
+    changed = False
+    module.exit_json(changed=changed, group_id=None)
+#    else:
+#        module.exit_json(changed=changed, group_id=None)
+
+# this is magic, see lib/ansible/module_common.py
+#<<INCLUDE_ANSIBLE_MODULE_COMMON>>
+main()

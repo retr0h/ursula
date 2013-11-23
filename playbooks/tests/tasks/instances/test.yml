@@ -1,0 +1,17 @@
+---
+- name: test
+  hosts: local
+  connection: local
+  vars_files:
+  - ../../vars/main.yml
+  tasks:
+    - name: test
+      local_action:
+        module: nova_group
+        name: foo
+        description: des
+        rules:
+          - proto: tcp
+            from_port: 2222
+            to_port: 2222
+            cidr_ip: 0.0.0.0/0

@@ -4,124 +4,130 @@ source $(dirname $0)/common
 
 $root/test/check-deps
 
-if [ ! -e $root/envs/test ]; then
-    echo "creating $root/envs/test/ directory"
-    mkdir $root/envs/test
-fi
-
-echo "writing initial inventory file"
-cat > $root/envs/test/hosts <<eof
-[local]
-127.0.0.1
-eof
-
-echo "destroying: $vms"
-$root/test/cleanup
-
-echo "setting up keypair"
+#echo "setting up keypair"
 $(ansible_command \
   "envs/test/hosts" \
   "root" \
-  $root/playbooks/tests/tasks/instances/keypair.yml)
+  $root/playbooks/tests/tasks/instances/test.yml)
 
-#TODO(retr0h): Move into an ansible library.
-echo "setting up security group"
-if ! nova secgroup-list | grep $security_group >/dev/null; then
-  nova secgroup-create $security_group "Rules for testing ursula" >/dev/null
-fi
+#if [ ! -e $root/envs/test ]; then
+#    echo "creating $root/envs/test/ directory"
+#    mkdir $root/envs/test
+#fi
 
-#TODO(retr0h): Move into an ansible library.
-echo "setting up security group rules"
-default_proto=tcp
-default_ports=(22 80 443 3306 4444 4567 4568 5000 5001 5672 8080 8774 8776 8777 8778 9292 9393 9696 9797 11211 35357 35358)
-default_cidr=0.0.0.0/0
-rules=$(nova secgroup-list-rules $security_group)
-security_group_id=$(nova secgroup-list | grep $security_group | awk -F\| '{print $2}' | tr -d ' ')
+#echo "writing initial inventory file"
+#cat > $root/envs/test/hosts <<eof
+#[local]
+#127.0.0.1
+#eof
 
-for port in "${default_ports[@]}"; do
-  regexp="$default_proto .* \| $port .* \| $port .* \| $default_cidr"
-  if ! echo "$rules" | egrep "$regexp" >/dev/null; then
-    echo "- creating new security group rule for port $port"
-    nova secgroup-add-rule $security_group $default_proto $port $port $default_cidr >/dev/null
-  fi
-done
-if ! echo "$rules" | grep icmp >/dev/null; then
-  nova secgroup-add-rule $security_group icmp -1 -1 $default_cidr >/dev/null
-fi
+#echo "destroying: $vms"
+#$root/test/cleanup
 
-echo "booting vms"
-$(ansible_command \
-  "envs/test/hosts" \
-  "root" \
-  $root/playbooks/tests/tasks/instances/create.yml)
-#TODO(retr0h): Move into an ansible library.
-for vm in $vms; do
-  sleep 15
-  add_floating_ip $vm
-done
+#echo "setting up keypair"
+#$(ansible_command \
+#  "envs/test/hosts" \
+#  "root" \
+#  $root/playbooks/tests/tasks/instances/keypair.yml)
 
-echo "waiting for vms to come up"
-for vm in $vms; do
-  while ! nova list | grep $vm | grep ACTIVE >/dev/null; do sleep 1; echo -n '.'; done; echo
-  ip=$(public_ip $vm)
-  echo "$vm $ip: waiting for sshd"
-  until echo '' | nc $ip 22 2>&1 >/dev/null; do echo -n '.'; sleep 1; done
+##TODO(retr0h): Move into an ansible library.
+#echo "setting up security group"
+#if ! nova secgroup-list | grep $security_group >/dev/null; then
+#  nova secgroup-create $security_group "Rules for testing ursula" >/dev/null
+#fi
 
-  # hostkeys are currently not generated until a few seconds after sshd comes up.
-  until ssh $ssh_args $login_user@$ip uptime 2>&1 >/dev/null; do
-    echo -n '.'
-    sleep 1
-  done
+##TODO(retr0h): Move into an ansible library.
+#echo "setting up security group rules"
+#default_proto=tcp
+#default_ports=(22 80 443 3306 4444 4567 4568 5000 5001 5672 8080 8774 8776 8777 8778 9292 9393 9696 9797 11211 35357 35358)
+#default_cidr=0.0.0.0/0
+#rules=$(nova secgroup-list-rules $security_group)
+#security_group_id=$(nova secgroup-list | grep $security_group | awk -F\| '{print $2}' | tr -d ' ')
 
-  ssh $ssh_args $login_user@$ip "echo '127.0.1.1 $vm' | sudo tee -a /etc/hosts"
+#for port in "${default_ports[@]}"; do
+#  regexp="$default_proto .* \| $port .* \| $port .* \| $default_cidr"
+#  if ! echo "$rules" | egrep "$regexp" >/dev/null; then
+#    echo "- creating new security group rule for port $port"
+#    nova secgroup-add-rule $security_group $default_proto $port $port $default_cidr >/dev/null
+#  fi
+#done
+#if ! echo "$rules" | grep icmp >/dev/null; then
+#  nova secgroup-add-rule $security_group icmp -1 -1 $default_cidr >/dev/null
+#fi
 
-  ssh $ssh_args $login_user@$ip sudo mkdir -p /root/.ssh 2>&1 >/dev/null
-  ssh $ssh_args $login_user@$ip sudo cp /home/$login_user/.ssh/authorized_keys /root/.ssh/. 2>&1 >/dev/null
-done
-controller_ip=$(public_ip test-controller-0)
+#echo "booting vms"
+#$(ansible_command \
+#  "envs/test/hosts" \
+#  "root" \
+#  $root/playbooks/tests/tasks/instances/create.yml)
+##TODO(retr0h): Move into an ansible library.
+#for vm in $vms; do
+#  sleep 15
+#  add_floating_ip $vm
+#done
 
-echo "building config"
-rm -rf $root/envs/test/group_vars/
-rm -f $root/envs/test/hosts
-mkdir -p $root/envs/test/
-cp -r $root/envs/example/group_vars $root/envs/test
-cp $root/envs/example/hosts $root/envs/test
-sed -i -e "s/^controller_primary: \&controller.*/controller_primary: \&controller $controller_ip/" envs/test/group_vars/all.yml
+#echo "waiting for vms to come up"
+#for vm in $vms; do
+#  while ! nova list | grep $vm | grep ACTIVE >/dev/null; do sleep 1; echo -n '.'; done; echo
+#  ip=$(public_ip $vm)
+#  echo "$vm $ip: waiting for sshd"
+#  until echo '' | nc $ip 22 2>&1 >/dev/null; do echo -n '.'; sleep 1; done
 
-echo "generating ssl cert for $controller_ip"
-cert_dir=$(mktemp -d 2> /dev/null || mktemp -d -t 'setup')
-pushd $cert_dir
-$root/test/gen-cert $controller_ip
-cat >> $root/envs/test/group_vars/all.yml <<eof
-ssl:
-  crt: |
-eof
-cat $cert_dir/$controller_ip.crt | sed 's/^/    /' >> $root/envs/test/group_vars/all.yml
-cat >> $root/envs/test/group_vars/all.yml <<eof
-  key: |
-eof
-cat $cert_dir/$controller_ip.key | sed 's/^/    /' >> $root/envs/test/group_vars/all.yml
-popd
-rm -rf $cert_dir
+#  # hostkeys are currently not generated until a few seconds after sshd comes up.
+#  until ssh $ssh_args $login_user@$ip uptime 2>&1 >/dev/null; do
+#    echo -n '.'
+#    sleep 1
+#  done
 
-echo "writing inventory file"
-cat > $root/envs/test/hosts <<eof
-[db]
-$(public_ip "test-controller-0")
-$(public_ip "test-controller-1")
+#  ssh $ssh_args $login_user@$ip "echo '127.0.1.1 $vm' | sudo tee -a /etc/hosts"
 
-[db_arbiter]
-$(public_ip "test-compute-0")
+#  ssh $ssh_args $login_user@$ip sudo mkdir -p /root/.ssh 2>&1 >/dev/null
+#  ssh $ssh_args $login_user@$ip sudo cp /home/$login_user/.ssh/authorized_keys /root/.ssh/. 2>&1 >/dev/null
+#done
+#controller_ip=$(public_ip test-controller-0)
 
-[controller]
-$(public_ip "test-controller-0")
-$(public_ip "test-controller-1")
+#echo "building config"
+#rm -rf $root/envs/test/group_vars/
+#rm -f $root/envs/test/hosts
+#mkdir -p $root/envs/test/
+#cp -r $root/envs/example/group_vars $root/envs/test
+#cp $root/envs/example/hosts $root/envs/test
+#sed -i -e "s/^controller_primary: \&controller.*/controller_primary: \&controller $controller_ip/" envs/test/group_vars/all.yml
 
-[compute]
-$(public_ip "test-compute-0")
+#echo "generating ssl cert for $controller_ip"
+#cert_dir=$(mktemp -d 2> /dev/null || mktemp -d -t 'setup')
+#pushd $cert_dir
+#$root/test/gen-cert $controller_ip
+#cat >> $root/envs/test/group_vars/all.yml <<eof
+#ssl:
+#  crt: |
+#eof
+#cat $cert_dir/$controller_ip.crt | sed 's/^/    /' >> $root/envs/test/group_vars/all.yml
+#cat >> $root/envs/test/group_vars/all.yml <<eof
+#  key: |
+#eof
+#cat $cert_dir/$controller_ip.key | sed 's/^/    /' >> $root/envs/test/group_vars/all.yml
+#popd
+#rm -rf $cert_dir
 
-[network]
-$(public_ip "test-controller-0")
-eof
+#echo "writing inventory file"
+#cat > $root/envs/test/hosts <<eof
+#[db]
+#$(public_ip "test-controller-0")
+#$(public_ip "test-controller-1")
 
-echo "vms are up: $vms !!"
+#[db_arbiter]
+#$(public_ip "test-compute-0")
+
+#[controller]
+#$(public_ip "test-controller-0")
+#$(public_ip "test-controller-1")
+
+#[compute]
+#$(public_ip "test-compute-0")
+
+#[network]
+#$(public_ip "test-controller-0")
+#eof
+
+#echo "vms are up: $vms !!"
