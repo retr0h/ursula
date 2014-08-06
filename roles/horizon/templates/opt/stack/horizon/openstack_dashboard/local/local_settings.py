@@ -84,22 +84,14 @@ LOCAL_PATH = os.path.dirname(os.path.abspath(__file__))
 from horizon.utils import secret_key
 SECRET_KEY = "{{ secrets.horizon_secret_key }}"
 
-{% macro memcached_hosts() -%}
-{% for host in groups['controller'] -%}
-   {% if loop.last -%}
-'{{ hostvars[host][primary_interface]['ipv4']['address'] }}:{{ memcached.port }}'
-   {%- else -%}
-'{{ hostvars[host][primary_interface]['ipv4']['address'] }}:{{ memcached.port }}',
-   {%- endif -%}
-{% endfor -%}
-{% endmacro -%}
-
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 CACHES = {
     'default': {
         'BACKEND' : 'django.core.cache.backends.memcached.MemcachedCache',
         'LOCATION' : [
-            {{ memcached_hosts() }}
+            {{ hostvars | endpoint_servers(groups=groups['controller'],
+                                           port=memcached.port,
+                                           interface=primary_interface) }}
         ]
     }
 }
